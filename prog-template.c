@@ -18,8 +18,8 @@ static knet_dev_t * dsPic;
 static int quitReq = 0; // quit variable for loop
 int feedback_frequency = 10;
 // Camera image dimensions
-unsigned int img_width=192;//752; // max width
-unsigned int img_height=144;//480; // max height
+#define IMG_WIDTH 192 // max width
+#define IMG_HEIGHT 144  // max height
 
 /*--------------------------------------------------------------------*/
 /* Make sure the program terminate properly on a ctrl-c */
@@ -109,23 +109,23 @@ void display_battery_status(knet_dev_t *hDev){
     }
 }
 
-int start_camera(unsigned int *dWidth, unsigned int *dHeight){
+int start_camera(unsigned int dWidth, unsigned int dHeight){
     // start camera and stream
     // Initialize camera
     int ret;
-    if ((ret=kb_camera_init(dWidth, dHeight))<0){
+    if ((ret=kb_camera_init(&dWidth, &dHeight))<0){
         fprintf(stderr,"camera init error %d\r\n",ret);
         return -1;
     }else {
         switch(ret) {
             case 1:
-                printf("width adjusted to %d\r\n",*dWidth);
+                printf("width adjusted to %d\r\n",dWidth);
                 break;
             case 2:
-                printf("height adjusted to %d\r\n",*dHeight);
+                printf("height adjusted to %d\r\n",dHeight);
                 break;
             case 3:
-                printf("width adjusted to %d and height adjusted to %d !\r\n",*dWidth,*dHeight);
+                printf("width adjusted to %d and height adjusted to %d !\r\n",dWidth,dHeight);
                 break;
             default:
                 break;
@@ -212,15 +212,8 @@ int main(int argc, char *argv[]) {
     char led_cnt = 0;
 
     // Start camera
-    unsigned char* img_buffer=NULL;
-    start_camera(&img_width, &img_height);
-    // Create buffer for images
-    img_buffer=malloc(img_width*img_height*3*sizeof(char));
-    if (img_buffer==NULL){
-        fprintf(stderr,"could not alloc image buffer!\r\n");
-        free(img_buffer);
-        return -2;
-    }
+    unsigned char img_buffer[IMG_WIDTH*IMG_HEIGHT*3*sizeof(char)] = {0};
+    start_camera(IMG_WIDTH, IMG_HEIGHT);
 
     while(quitReq == 0) {
         
