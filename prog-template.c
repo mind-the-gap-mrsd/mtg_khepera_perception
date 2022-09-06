@@ -17,7 +17,9 @@
 static knet_dev_t * dsPic;
 static int quitReq = 0; // quit variable for loop
 int feedback_frequency = 10;
-
+// Camera image dimensions
+unsigned int img_width=192;//752; // max width
+unsigned int img_height=144;//480; // max height
 
 /*--------------------------------------------------------------------*/
 /* Make sure the program terminate properly on a ctrl-c */
@@ -107,7 +109,56 @@ void display_battery_status(knet_dev_t *hDev){
     }
 }
 
-
+int start_camera(unsigned int *dWidth, unsigned int *dHeight){
+    // start camera and stream
+    // Initialize camera
+    int ret;
+    if ((ret=kb_camera_init(dWidth, dHeight))<0){
+        fprintf(stderr,"camera init error %d\r\n",ret);
+        return -1;
+    }else {
+        switch(ret) {
+            case 1:
+                printf("width adjusted to %d\r\n",*dWidth);
+                break;
+            case 2:
+                printf("height adjusted to %d\r\n",*dHeight);
+                break;
+            case 3:
+                printf("width adjusted to %d and height adjusted to %d !\r\n",*dWidth,*dHeight);
+                break;
+            default:
+                break;
+        }
+    }
+    // Start stream
+    if(kb_captureStart()<0){
+        kb_camera_release();
+        fprintf(stderr,"ERROR: capture start error in mutli frames!\r\n");
+        return -3;
+    }
+    // 100ms startup
+    usleep(100000);
+    printf("Successfully started camera and stream\n");
+}
+int stop_camera(){
+    // stops camera and stream
+    // Stop video stream
+    if (kb_captureStop()<0){
+        fprintf(stderr,"ERROR: capture stop error in mutli frames!\r\n");
+    }
+    // releasing camera
+    kb_camera_release();
+    printf("Shut down camera and stream\n");
+}
+void getImg(unsigned char* buffer){
+    int ret;
+    // Get frame
+    if ((ret=kb_frameRead(buffer))<0){
+        fprintf(stderr,"ERROR: frame capture error %d!\r\n",ret);
+    }
+    return;
+}
 
 
 /*----------------Main Program-----------------*/
@@ -160,6 +211,17 @@ int main(int argc, char *argv[]) {
     // For blinking LED
     char led_cnt = 0;
 
+    // Start camera
+    unsigned char* img_buffer=NULL;
+    start_camera(&img_width, &img_height);
+    // Create buffer for images
+    img_buffer=malloc(img_width*img_height*3*sizeof(char));
+    if (img_buffer==NULL){
+        fprintf(stderr,"could not alloc image buffer!\r\n");
+        free(img_buffer);
+        return -2;
+    }
+
     while(quitReq == 0) {
         
 		// Update time
@@ -204,6 +266,9 @@ int main(int argc, char *argv[]) {
             // else
             //     memset(LRF_Buffer, 0, sizeof(long)*LRF_DATA_NB);
 
+        // Get camera frame
+        getImg(img_buffer);
+
     		//TCPsendSensor(new_socket, T, acc_X, acc_Y, acc_Z, gyro_X, gyro_Y, gyro_Z, posL, posR, spdL, spdR, usValues, irValues);
     		//UDPsendSensor(UDP_sockfd, servaddr, 0, acc_X, acc_Y, acc_Z, gyro_X, gyro_Y, gyro_Z, posL, posR, spdL, spdR, usValues, irValues, LRF_Buffer);
     		//printf("Sleeping...\n");
@@ -211,7 +276,7 @@ int main(int argc, char *argv[]) {
             // Display battery status
             display_battery_status(dsPic);
 
-		}
+		  }
   	}	
 
     // Red when not doing anything
