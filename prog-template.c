@@ -18,8 +18,8 @@ static knet_dev_t * dsPic;
 static int quitReq = 0; // quit variable for loop
 int feedback_frequency = 10;
 // Camera image dimensions
-#define IMG_WIDTH 192 // max width
-#define IMG_HEIGHT 144  // max height
+#define IMG_WIDTH 752 // max width
+#define IMG_HEIGHT 480  // max height
 
 /*--------------------------------------------------------------------*/
 /* Make sure the program terminate properly on a ctrl-c */
@@ -171,7 +171,8 @@ int main(int argc, char *argv[]) {
 	long int main_loop_delay = 100000;
 
 	/* Initial Template Setup by LinKhepera */
-	int rc;
+	int rc,ret;
+  printf("Hello humans\n");
 
 	/* Set the libkhepera debug level - Highly recommended for development. */
 	kb_set_debug_level(2);
@@ -261,6 +262,15 @@ int main(int argc, char *argv[]) {
 
         // Get camera frame
         getImg(img_buffer);
+
+        // saving image
+        if ((ret=save_buffer_to_jpg("original.jpg",100,img_buffer))<0)
+        {
+          fprintf(stderr,"save image error %d\r\n",ret);
+          kb_camera_release();
+          return -4;
+        }
+        break;
 
     		//TCPsendSensor(new_socket, T, acc_X, acc_Y, acc_Z, gyro_X, gyro_Y, gyro_Z, posL, posR, spdL, spdR, usValues, irValues);
     		//UDPsendSensor(UDP_sockfd, servaddr, 0, acc_X, acc_Y, acc_Z, gyro_X, gyro_Y, gyro_Z, posL, posR, spdL, spdR, usValues, irValues, LRF_Buffer);
