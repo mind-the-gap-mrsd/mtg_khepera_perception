@@ -39,7 +39,7 @@ export NM=arm-poky-linux-gnueabi-nm
 export M4=m4
 export TARGET_PREFIX=arm-poky-linux-gnueabi-
 export CONFIGURE_FLAGS=--target=arm-poky-linux-gnueabi --host=arm-poky-linux-gnueabi --build=i686-linux --with-libtool-sysroot=${SDKTARGETSYSROOT}
-export CFLAGS= -O2 -pipe -g -feliminate-unused-debug-types
+export CFLAGS= -O2 -pipe -g -feliminate-unused-debug-types -std=gnu99 -fPIC -Wall -Wno-unused-parameter -Wno-unused-function
 export CXXFLAGS= -O2 -pipe -g -feliminate-unused-debug-types
 export LDFLAGS=-Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
 export CPPFLAGS=
@@ -73,18 +73,22 @@ OBJS	= $(patsubst %.c,%.o,${SRCS})
 INCS	= -I ${LIBKHEPERA}/include
 LIBS	= -L ${LIBKHEPERA}/lib -lkhepera -lpthread -lm
 
-CFLAGS 	= -O2
+#CFLAGS 	= 
+
+APRILTAG_SRCS := apriltag/apriltag.c apriltag/apriltag_pose.c apriltag/apriltag_quad_thresh.c apriltag/common/g2d.c apriltag/common/getopt.c apriltag/common/homography.c apriltag/common/image_u8.c apriltag/common/image_u8x3.c apriltag/common/image_u8x4.c apriltag/common/matd.c apriltag/common/pam.c apriltag/common/pjpeg.c apriltag/common/pjpeg-idct.c apriltag/common/pnm.c apriltag/common/string_util.c apriltag/common/svd22.c apriltag/common/time_util.c apriltag/common/unionfind.c apriltag/common/workerpool.c apriltag/common/zarray.c apriltag/common/zhash.c apriltag/common/zmaxheap.c apriltag/tag16h5.c apriltag/tag25h9.c apriltag/tag36h11.c apriltag/tagCircle21h7.c apriltag/tagCircle49h12.c apriltag/tagCustom48h12.c apriltag/tagStandard41h12.c apriltag/tagStandard52h13.c
+APRILTAG_HEADERS := $(shell ls apriltag/*.h apriltag/common/*.h)
+APRILTAG_OBJS := $(APRILTAG_SRCS:%.c=%.o)
 
 # for debugging
 #CFLAGS 	= -g
 
-TARGET	= template template-static
+TARGET	= template template-static 
 
 .PHONY: all clean depend
 
 template: prog-template.o
 	@echo "Building $@"
-	$(CC) -o $@ $? $(LIBS) $(CFLAGS) 
+	$(CC) $(APRILTAG_HEADERS) -o $@ $? ${APRILTAG_SRCS} $(LIBS) $(CFLAGS) 
 
 template-static: prog-template.o
 	@echo "Building $@"
@@ -104,7 +108,7 @@ depend:
 
 %.o:	%.c
 	@echo "Compiling $@"
-	@$(CC) $(INCS) $(NANO_INC) -c $(CFLAGS) $< -o $@
+	@$(CC) $(INCS) -c $(CFLAGS) $< -o $@
 
 ifeq (.depend,$(wildcard .depend))
 include .depend 
