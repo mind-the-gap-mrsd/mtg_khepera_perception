@@ -179,6 +179,20 @@ void getImg(unsigned char* buffer){
     return;
 }
 
+bool rgb_2_gray_scale(unsigned char* original, unsigned char* result) {
+
+    if(into_greyscale(original)!=0) {
+        printf("Failed to convert to greyscale!");
+        return false;
+    }
+
+    for(int i=0; i<IMG_WIDTH*IMG_HEIGHT*3;i+=3) {
+        result[(int)(i/3)]= original[i];
+    }
+
+    return true;
+}   
+
 bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td) {
 
     int result = false;
@@ -186,14 +200,12 @@ bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td) {
 
     zarray_t *detections = apriltag_detector_detect(td, &im);
     int i;
-    printf("Entering loop");
     for (i = 0; i < zarray_size(detections); i++) {
         apriltag_detection_t *det;
         zarray_get(detections, i, &det);
-        
-        printf("Hey");
-        // printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, margin %8.3f\n",
-        //                    i, det->family->nbits, det->family->h, det->id, det->hamming, det->decision_margin);
+
+        printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, margin %8.3f\n",
+                           i, det->family->nbits, det->family->h, det->id, det->hamming, det->decision_margin);
     //     // Do stuff with detections here.
 
         result = true;
@@ -209,12 +221,10 @@ bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td) {
 #define FOR_DEV_SPD 850
 
 int main(int argc, char *argv[]) {
-	int i;
 	long int main_loop_delay = 10000;
 
 	/* Initial Template Setup by LinKhepera */
-	int rc,ret;
-    printf("Hello humanss\n");
+	int rc;
 
 	/* Set the libkhepera debug level - Highly recommended for development. */
 	kb_set_debug_level(2);
@@ -256,6 +266,7 @@ int main(int argc, char *argv[]) {
 
     // Start camera
     unsigned char img_buffer[IMG_WIDTH*IMG_HEIGHT*3*sizeof(char)] = {0};
+    unsigned char img_buffer_gray_scale[IMG_WIDTH*IMG_HEIGHT*sizeof(char)] = {0};
     start_camera(IMG_WIDTH, IMG_HEIGHT);
 
     // Set up Apriltag
@@ -316,18 +327,17 @@ int main(int argc, char *argv[]) {
 
             // Get camera frame
             getImg(img_buffer);
-            if(into_greyscale(img_buffer)!=0) {
-                printf("Failed to convert to greyscale!");
+            if(rgb_2_gray_scale(img_buffer, img_buffer_gray_scale)) {
+                processImageFrame(img_buffer_gray_scale, td);
             }
-            
-            printf("%d \n ",processImageFrame(img_buffer, td));
+
             // saving image
-            if ((ret=save_buffer_to_jpg("original.jpg",100,img_buffer))<0)
-            {
-                fprintf(stderr,"save image error %d\r\n",ret);
-                kb_camera_release();
-                return -4;
-            }
+            // if ((ret=save_buffer_to_jpg("original.jpg",100,img_buffer_gray_scale))<0)
+            // {
+            //     fprintf(stderr,"save image error %d\r\n",ret);
+            //     kb_camera_release();
+            //     return -4;
+            // }
 
     		//TCPsendSensor(new_socket, T, acc_X, acc_Y, acc_Z, gyro_X, gyro_Y, gyro_Z, posL, posR, spdL, spdR, usValues, irValues);
     		//UDPsendSensor(UDP_sockfd, servaddr, 0, acc_X, acc_Y, acc_Z, gyro_X, gyro_Y, gyro_Z, posL, posR, spdL, spdR, usValues, irValues, LRF_Buffer);
