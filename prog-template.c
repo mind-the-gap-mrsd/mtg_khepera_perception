@@ -157,6 +157,7 @@ int start_camera(unsigned int dWidth, unsigned int dHeight){
     // 100ms startup
     usleep(100000);
     printf("Successfully started camera and stream\n");
+    return 0;
 }
 int stop_camera(){
     // stops camera and stream
@@ -167,6 +168,7 @@ int stop_camera(){
     // releasing camera
     kb_camera_release();
     printf("Shut down camera and stream\n");
+    return 0;
 }
 void getImg(unsigned char* buffer){
     int ret;
@@ -175,6 +177,33 @@ void getImg(unsigned char* buffer){
         fprintf(stderr,"ERROR: frame capture error %d!\r\n",ret);
     }
     return;
+}
+
+bool processImageFrame(unsigned char* buffer) {
+
+    int result = false;
+    image_u8_t im = { .width = IMG_WIDTH, .height = IMG_HEIGHT, .stride = 1, .buf = buffer };
+    // image_u8_t* im = image_u8_create_from_pnm("original.jpg");
+    apriltag_detector_t *td = apriltag_detector_create();
+    apriltag_family_t *tf = tag36h11_create();
+    apriltag_detector_add_family(td, tf);
+    zarray_t *detections = apriltag_detector_detect(td, &im);
+    int i;
+    for (i = 0; i < zarray_size(detections); i++) {
+        apriltag_detection_t *det;
+        zarray_get(detections, i, &det);
+        
+        printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, margin %8.3f\n",
+                           i, det->family->nbits, det->family->h, det->id, det->hamming, det->decision_margin);
+    //     // Do stuff with detections here.
+
+        result = true;
+     }
+    // // Cleanup.
+    tag36h11_destroy(tf);
+    apriltag_detector_destroy(td);
+
+    return result;
 }
 
 
@@ -189,7 +218,7 @@ int main(int argc, char *argv[]) {
 
 	/* Initial Template Setup by LinKhepera */
 	int rc,ret;
-    printf("Hello humans\n");
+    printf("Hello humanss\n");
 
 	/* Set the libkhepera debug level - Highly recommended for development. */
 	kb_set_debug_level(2);
@@ -279,7 +308,8 @@ int main(int argc, char *argv[]) {
 
             // Get camera frame
             getImg(img_buffer);
-
+            
+            processImageFrame(img_buffer);
             // saving image
             if ((ret=save_buffer_to_jpg("original.jpg",100,img_buffer))<0)
             {
@@ -287,21 +317,6 @@ int main(int argc, char *argv[]) {
             kb_camera_release();
             return -4;
             }
-            // image_u8_t* im = image_u8_create_from_pnm("original.jpg");
-            // apriltag_detector_t *td = apriltag_detector_create();
-            // apriltag_family_t *tf = tagStandard41h12_create();
-            // apriltag_detector_add_family(td, tf);
-            // zarray_t *detections = apriltag_detector_detect(td, im);
-            // int i;
-            // for (i = 0; i < zarray_size(detections); i++) {
-            //     apriltag_detection_t *det;
-            //     zarray_get(detections, i, &det);
-
-            //     // Do stuff with detections here.
-            // }
-            // // Cleanup.
-            // tagStandard41h12_destroy(tf);
-            // apriltag_detector_destroy(td);
             break;
 
     		//TCPsendSensor(new_socket, T, acc_X, acc_Y, acc_Z, gyro_X, gyro_Y, gyro_Z, posL, posR, spdL, spdR, usValues, irValues);
