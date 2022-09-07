@@ -12,7 +12,24 @@
 #include <math.h>
 #include <ifaddrs.h>
 
+// AprilTag related headers
+#include "apriltag/common/getopt.h"
+#include "apriltag/common/image_u8.h"
+#include "apriltag/common/pjpeg.h"
+#include "apriltag/common/zarray.h"
+#ifdef __linux__
+    #include <unistd.h>
+#endif
 
+#include "apriltag/apriltag.h"
+#include "apriltag/tag36h11.h"
+#include "apriltag/tag25h9.h"
+#include "apriltag/tag16h5.h"
+#include "apriltag/tagCircle21h7.h"
+#include "apriltag/tagCircle49h12.h"
+#include "apriltag/tagCustom48h12.h"
+#include "apriltag/tagStandard41h12.h"
+#include "apriltag/tagStandard52h13.h"
 
 static knet_dev_t * dsPic;
 static int quitReq = 0; // quit variable for loop
@@ -266,9 +283,28 @@ int main(int argc, char *argv[]) {
             // else
             //     memset(LRF_Buffer, 0, sizeof(long)*LRF_DATA_NB);
 
-        // Get camera frame
-        getImg(img_buffer);
+            // Get camera frame
+            getImg(img_buffer);
+            image_u8_t* im;
+            im->buf = img_buffer;
+            im->height = img_height;
+            im->width = img_width;
+            im->stride = 1;
+            // image_u8_t* im = image_u8_create_from_pnm("test.png");
+            apriltag_detector_t *td = apriltag_detector_create();
+            apriltag_family_t *tf = tagStandard41h12_create();
+            apriltag_detector_add_family(td, tf);
+            zarray_t *detections = apriltag_detector_detect(td, im);
+            int i;
+            for (i = 0; i < zarray_size(detections); i++) {
+                apriltag_detection_t *det;
+                zarray_get(detections, i, &det);
 
+                // Do stuff with detections here.
+            }
+            // Cleanup.
+            tagStandard41h12_destroy(tf);
+            apriltag_detector_destroy(td);
     		//TCPsendSensor(new_socket, T, acc_X, acc_Y, acc_Z, gyro_X, gyro_Y, gyro_Z, posL, posR, spdL, spdR, usValues, irValues);
     		//UDPsendSensor(UDP_sockfd, servaddr, 0, acc_X, acc_Y, acc_Z, gyro_X, gyro_Y, gyro_Z, posL, posR, spdL, spdR, usValues, irValues, LRF_Buffer);
     		//printf("Sleeping...\n");
