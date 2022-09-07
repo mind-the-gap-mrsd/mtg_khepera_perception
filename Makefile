@@ -39,7 +39,7 @@ export NM=arm-poky-linux-gnueabi-nm
 export M4=m4
 export TARGET_PREFIX=arm-poky-linux-gnueabi-
 export CONFIGURE_FLAGS=--target=arm-poky-linux-gnueabi --host=arm-poky-linux-gnueabi --build=i686-linux --with-libtool-sysroot=${SDKTARGETSYSROOT}
-export CFLAGS= -O2 -pipe -g -feliminate-unused-debug-types -std=gnu99 -fPIC -Wall -Wno-unused-parameter -Wno-unused-function
+export CFLAGS= -O2 -pipe -g -feliminate-unused-debug-types -std=gnu99 -fPIC -Wall -Wno-unused-parameter -Wno-unused-function -fno-strict-overflow
 export CXXFLAGS= -O2 -pipe -g -feliminate-unused-debug-types
 export LDFLAGS=-Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
 export CPPFLAGS=
@@ -70,8 +70,8 @@ SRCS	= $(wildcard *.c)
 
 
 OBJS	= $(patsubst %.c,%.o,${SRCS})
-INCS	= -I ${LIBKHEPERA}/include
-LIBS	= -L ${LIBKHEPERA}/lib -lkhepera -lpthread -lm
+INCS	= -I ${LIBKHEPERA}/include -I. -I apriltag
+LIBS	= -L ${LIBKHEPERA}/lib  -L. -lkhepera -lpthread -lm -lapriltag
 
 #CFLAGS 	= 
 
@@ -88,7 +88,11 @@ TARGET	= template template-static
 
 template: prog-template.o
 	@echo "Building $@"
-	$(CC) $(APRILTAG_HEADERS) -o $@ $? ${APRILTAG_SRCS} $(LIBS) $(CFLAGS) 
+	$(CC) -o $@ $? $(LIBS) $(CFLAGS) 
+
+libapriltag.a: $(APRILTAG_OBJS)
+	@echo "  [$@]"
+	@$(AR) -cq $@ $(APRILTAG_OBJS)
 
 template-static: prog-template.o
 	@echo "Building $@"
@@ -109,6 +113,8 @@ depend:
 %.o:	%.c
 	@echo "Compiling $@"
 	@$(CC) $(INCS) -c $(CFLAGS) $< -o $@
+
+libs: libapriltag.a
 
 ifeq (.depend,$(wildcard .depend))
 include .depend 
