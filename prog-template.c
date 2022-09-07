@@ -284,21 +284,21 @@ int main(int argc, char *argv[]) {
             // im->height = img_height;
             // im->width = img_width;
             // im->stride = 1;
-            image_u8_t* im = image_u8_create_from_pnm("test.png");
-            apriltag_detector_t *td = apriltag_detector_create();
-            apriltag_family_t *tf = tagStandard41h12_create();
-            apriltag_detector_add_family(td, tf);
-            zarray_t *detections = apriltag_detector_detect(td, im);
-            int i;
-            for (i = 0; i < zarray_size(detections); i++) {
-                apriltag_detection_t *det;
-                zarray_get(detections, i, &det);
+            // image_u8_t* im = image_u8_create_from_pnm("test.png");
+            // apriltag_detector_t *td = apriltag_detector_create();
+            // apriltag_family_t *tf = tagStandard41h12_create();
+            // apriltag_detector_add_family(td, tf);
+            // zarray_t *detections = apriltag_detector_detect(td, im);
+            // int i;
+            // for (i = 0; i < zarray_size(detections); i++) {
+            //     apriltag_detection_t *det;
+            //     zarray_get(detections, i, &det);
 
-                // Do stuff with detections here.
-            }
-            // Cleanup.
-            tagStandard41h12_destroy(tf);
-            apriltag_detector_destroy(td);
+            //     // Do stuff with detections here.
+            // }
+            // // Cleanup.
+            // tagStandard41h12_destroy(tf);
+            // apriltag_detector_destroy(td);
         // Get camera frame
         getImg(img_buffer);
 
@@ -309,21 +309,21 @@ int main(int argc, char *argv[]) {
           kb_camera_release();
           return -4;
         }
-        image_u8_t* im = image_u8_create_from_pnm("original.jpg");
-        apriltag_detector_t *td = apriltag_detector_create();
-        apriltag_family_t *tf = tagStandard41h12_create();
-        apriltag_detector_add_family(td, tf);
-        zarray_t *detections = apriltag_detector_detect(td, im);
-        int i;
-        for (i = 0; i < zarray_size(detections); i++) {
-            apriltag_detection_t *det;
-            zarray_get(detections, i, &det);
+        // image_u8_t* im = image_u8_create_from_pnm("original.jpg");
+        // apriltag_detector_t *td = apriltag_detector_create();
+        // apriltag_family_t *tf = tagStandard41h12_create();
+        // apriltag_detector_add_family(td, tf);
+        // zarray_t *detections = apriltag_detector_detect(td, im);
+        // int for_i;
+        // for (for_i = 0; i < zarray_size(detections); i++) {
+        //     apriltag_detection_t *det;
+        //     zarray_get(detections, i, &det);
 
-            // Do stuff with detections here.
-        }
-        // Cleanup.
-        tagStandard41h12_destroy(tf);
-        apriltag_detector_destroy(td);
+        //     // Do stuff with detections here.
+        // }
+        // // Cleanup.
+        // tagStandard41h12_destroy(tf);
+        // apriltag_detector_destroy(td);
         break;
 
     		//TCPsendSensor(new_socket, T, acc_X, acc_Y, acc_Z, gyro_X, gyro_Y, gyro_Z, posL, posR, spdL, spdR, usValues, irValues);
