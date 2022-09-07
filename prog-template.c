@@ -35,8 +35,8 @@ static knet_dev_t * dsPic;
 static int quitReq = 0; // quit variable for loop
 int feedback_frequency = 10;
 // Camera image dimensions
-unsigned int img_width=192;//752; // max width
-unsigned int img_height=144;//480; // max height
+#define IMG_WIDTH 752 // max width
+#define IMG_HEIGHT 480  // max height
 
 /*--------------------------------------------------------------------*/
 /* Make sure the program terminate properly on a ctrl-c */
@@ -126,23 +126,23 @@ void display_battery_status(knet_dev_t *hDev){
     }
 }
 
-int start_camera(unsigned int *dWidth, unsigned int *dHeight){
+int start_camera(unsigned int dWidth, unsigned int dHeight){
     // start camera and stream
     // Initialize camera
     int ret;
-    if ((ret=kb_camera_init(dWidth, dHeight))<0){
+    if ((ret=kb_camera_init(&dWidth, &dHeight))<0){
         fprintf(stderr,"camera init error %d\r\n",ret);
         return -1;
     }else {
         switch(ret) {
             case 1:
-                printf("width adjusted to %d\r\n",*dWidth);
+                printf("width adjusted to %d\r\n",dWidth);
                 break;
             case 2:
-                printf("height adjusted to %d\r\n",*dHeight);
+                printf("height adjusted to %d\r\n",dHeight);
                 break;
             case 3:
-                printf("width adjusted to %d and height adjusted to %d !\r\n",*dWidth,*dHeight);
+                printf("width adjusted to %d and height adjusted to %d !\r\n",dWidth,dHeight);
                 break;
             default:
                 break;
@@ -188,7 +188,8 @@ int main(int argc, char *argv[]) {
 	long int main_loop_delay = 100000;
 
 	/* Initial Template Setup by LinKhepera */
-	int rc;
+	int rc,ret;
+  printf("Hello humans\n");
 
 	/* Set the libkhepera debug level - Highly recommended for development. */
 	kb_set_debug_level(2);
@@ -229,15 +230,8 @@ int main(int argc, char *argv[]) {
     char led_cnt = 0;
 
     // Start camera
-    unsigned char* img_buffer=NULL;
-    start_camera(&img_width, &img_height);
-    // Create buffer for images
-    img_buffer=malloc(img_width*img_height*3*sizeof(char));
-    if (img_buffer==NULL){
-        fprintf(stderr,"could not alloc image buffer!\r\n");
-        free(img_buffer);
-        return -2;
-    }
+    unsigned char img_buffer[IMG_WIDTH*IMG_HEIGHT*3*sizeof(char)] = {0};
+    start_camera(IMG_WIDTH, IMG_HEIGHT);
 
     while(quitReq == 0) {
         
@@ -305,6 +299,18 @@ int main(int argc, char *argv[]) {
             // Cleanup.
             tagStandard41h12_destroy(tf);
             apriltag_detector_destroy(td);
+        // Get camera frame
+        getImg(img_buffer);
+
+        // saving image
+        if ((ret=save_buffer_to_jpg("original.jpg",100,img_buffer))<0)
+        {
+          fprintf(stderr,"save image error %d\r\n",ret);
+          kb_camera_release();
+          return -4;
+        }
+        break;
+
     		//TCPsendSensor(new_socket, T, acc_X, acc_Y, acc_Z, gyro_X, gyro_Y, gyro_Z, posL, posR, spdL, spdR, usValues, irValues);
     		//UDPsendSensor(UDP_sockfd, servaddr, 0, acc_X, acc_Y, acc_Z, gyro_X, gyro_Y, gyro_Z, posL, posR, spdL, spdR, usValues, irValues, LRF_Buffer);
     		//printf("Sleeping...\n");
