@@ -179,29 +179,25 @@ void getImg(unsigned char* buffer){
     return;
 }
 
-bool processImageFrame(unsigned char* buffer) {
+bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td) {
 
     int result = false;
-    image_u8_t im = { .width = IMG_WIDTH, .height = IMG_HEIGHT, .stride = 1, .buf = buffer };
-    // image_u8_t* im = image_u8_create_from_pnm("original.jpg");
-    apriltag_detector_t *td = apriltag_detector_create();
-    apriltag_family_t *tf = tag36h11_create();
-    apriltag_detector_add_family(td, tf);
+    image_u8_t im = { .width = IMG_WIDTH, .height = IMG_HEIGHT, .stride = IMG_WIDTH, .buf = buffer };
+
     zarray_t *detections = apriltag_detector_detect(td, &im);
     int i;
+    printf("Entering loop");
     for (i = 0; i < zarray_size(detections); i++) {
         apriltag_detection_t *det;
         zarray_get(detections, i, &det);
         
-        printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, margin %8.3f\n",
-                           i, det->family->nbits, det->family->h, det->id, det->hamming, det->decision_margin);
+        printf("Hey");
+        // printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, margin %8.3f\n",
+        //                    i, det->family->nbits, det->family->h, det->id, det->hamming, det->decision_margin);
     //     // Do stuff with detections here.
 
         result = true;
-     }
-    // // Cleanup.
-    tag36h11_destroy(tf);
-    apriltag_detector_destroy(td);
+    }
 
     return result;
 }
@@ -214,7 +210,7 @@ bool processImageFrame(unsigned char* buffer) {
 
 int main(int argc, char *argv[]) {
 	int i;
-	long int main_loop_delay = 100000;
+	long int main_loop_delay = 10000;
 
 	/* Initial Template Setup by LinKhepera */
 	int rc,ret;
@@ -262,6 +258,18 @@ int main(int argc, char *argv[]) {
     unsigned char img_buffer[IMG_WIDTH*IMG_HEIGHT*3*sizeof(char)] = {0};
     start_camera(IMG_WIDTH, IMG_HEIGHT);
 
+    // Set up Apriltag
+    // image_u8_t* im = image_u8_create_from_pnm("original.jpg");
+    apriltag_detector_t *td = apriltag_detector_create();
+    apriltag_family_t *tf = tag36h11_create();
+    apriltag_detector_add_family(td, tf);
+
+    td->quad_decimate = 2.0;
+    td->quad_sigma = 0.0;
+    td->nthreads = 1;
+    td->debug = false;
+    td->refine_edges = true;
+
     while(quitReq == 0) {
         
 		// Update time
@@ -308,16 +316,18 @@ int main(int argc, char *argv[]) {
 
             // Get camera frame
             getImg(img_buffer);
+            if(into_greyscale(img_buffer)!=0) {
+                printf("Failed to convert to greyscale!");
+            }
             
-            processImageFrame(img_buffer);
+            printf("%d \n ",processImageFrame(img_buffer, td));
             // saving image
             if ((ret=save_buffer_to_jpg("original.jpg",100,img_buffer))<0)
             {
-            fprintf(stderr,"save image error %d\r\n",ret);
-            kb_camera_release();
-            return -4;
+                fprintf(stderr,"save image error %d\r\n",ret);
+                kb_camera_release();
+                return -4;
             }
-            break;
 
     		//TCPsendSensor(new_socket, T, acc_X, acc_Y, acc_Z, gyro_X, gyro_Y, gyro_Z, posL, posR, spdL, spdR, usValues, irValues);
     		//UDPsendSensor(UDP_sockfd, servaddr, 0, acc_X, acc_Y, acc_Z, gyro_X, gyro_Y, gyro_Z, posL, posR, spdL, spdR, usValues, irValues, LRF_Buffer);
@@ -345,7 +355,9 @@ int main(int argc, char *argv[]) {
   	// set to regular idle mode!
   	kh4_SetMode(kh4RegIdle, dsPic);
 
-
+    // // Cleanup.
+    tag36h11_destroy(tf);
+    apriltag_detector_destroy(td);
 
  	return 0;  
 }
