@@ -68,6 +68,14 @@ LIBKHEPERA = ${LIBKHEPERA_ROOT}/build-${TARGET_SYSTEM}
 
 SRCS	= $(wildcard *.c)
 
+# Add nanopb sources
+NANO_SRCS = nanopb/pb_encode.c  # The nanopb encoder
+NANO_SRCS += nanopb/pb_decode.c  # The nanopb decoder
+NANO_SRCS += nanopb/pb_common.c  # The nanopb common parts
+NANO_SRCS += ../robosar_messages/proto/include/c/robosar.pb.c # robosar library file
+
+NANO_INC = -I nanopb
+NANO_INC += -I ../robosar_messages/proto/include/c
 
 OBJS	= $(patsubst %.c,%.o,${SRCS})
 INCS	= -I ${LIBKHEPERA}/include -I. -I apriltag
@@ -88,7 +96,7 @@ TARGET	= template template-static
 
 template: prog-template.o
 	@echo "Building $@"
-	$(CC) -o $@ $? $(LIBS) $(CFLAGS) 
+	$(CC) $(NANO_INC) -o $@ $? ${NANO_SRCS} $(LIBS) $(CFLAGS) 
 
 libapriltag.a: $(APRILTAG_OBJS)
 	@echo "  [$@]"
@@ -112,7 +120,7 @@ depend:
 
 %.o:	%.c
 	@echo "Compiling $@"
-	@$(CC) $(INCS) -c $(CFLAGS) $< -o $@
+	@$(CC) $(INCS) $(NANO_INC) -c $(CFLAGS) $< -o $@
 
 libs: libapriltag.a
 

@@ -11,6 +11,12 @@
 #include <arpa/inet.h>
 #include <math.h>
 #include <ifaddrs.h>
+#include<stdio.h> 
+#include<fcntl.h>
+
+// Nanopb related headers
+#include "robosar.pb.h"
+#include <pb_encode.h>
 
 // AprilTag related headers
 #include "apriltag/common/getopt.h"
@@ -126,7 +132,7 @@ void display_battery_status(knet_dev_t *hDev){
     }
 }
 
-int start_camera(unsigned int dWidth, unsigned int dHeight){
+int start_camera(unsigned int dWidth, unsigned int dHeight) {
     // start camera and stream
     // Initialize camera
     int ret;
@@ -193,13 +199,16 @@ bool rgb_2_gray_scale(unsigned char* original, unsigned char* result) {
     return true;
 }   
 
-bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td) {
+bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td, int fifo_client) {
 
     int result = false;
     image_u8_t im = { .width = IMG_WIDTH, .height = IMG_HEIGHT, .stride = IMG_WIDTH, .buf = buffer };
 
     zarray_t *detections = apriltag_detector_detect(td, &im);
     int i;
+
+    // Create protobuf message
+    robosar_fms_AllDetections proto_detections;	
     for (i = 0; i < zarray_size(detections); i++) {
         apriltag_detection_t *det;
         zarray_get(detections, i, &det);
@@ -207,8 +216,29 @@ bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td) {
         printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, margin %8.3f\n",
                            i, det->family->nbits, det->family->h, det->id, det->hamming, det->decision_margin);
     //     // Do stuff with detections here.
-
+        robosar_fms_AprilTagDetection detection;
+        detection.tag_id =  det->id;
+        proto_detections.tag_detections[i] = detection;
         result = true;
+    }
+
+    if(result) {
+        // Send detections to pipe
+        uint8_t proto_buffer[25000];
+        pb_ostream_t stream = pb_ostream_from_buffer(proto_buffer, sizeof(proto_buffer));
+        bool status = pb_encode(&stream, robosar_fms_AllDetections_fields, &proto_detections);
+        size_t proto_msg_length = stream.bytes_written;
+
+        if (!status)
+        {
+            printf("Encoding failed: %s\n", PB_GET_ERROR(&stream));
+        }
+        else 
+        {
+            //printf("Sending... %ld\n",proto_msg_length);
+            //printf("Send completed.\n");
+            write(fifo_client, proto_buffer,proto_msg_length);
+        }
     }
 
     return result;
@@ -281,6 +311,13 @@ int main(int argc, char *argv[]) {
     td->debug = false;
     td->refine_edges = true;
 
+    // Open IPC Pipe
+    int fifo_client = open("fifo_client",O_WRONLY);
+
+    if(fifo_client<1) {
+        printf("Error opening file");
+    }
+
     while(quitReq == 0) {
         
 		// Update time
@@ -328,7 +365,7 @@ int main(int argc, char *argv[]) {
             // Get camera frame
             getImg(img_buffer);
             if(rgb_2_gray_scale(img_buffer, img_buffer_gray_scale)) {
-                processImageFrame(img_buffer_gray_scale, td);
+                processImageFrame(img_buffer_gray_scale, td, fifo_client);
             }
 
             // saving image

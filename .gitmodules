@@ -1,3 +1,6 @@
 [submodule "apriltag"]
 	path = apriltag
 	url = https://github.com/MRSD-Team-RoboSAR/apriltag
+[submodule "nanopb"]
+	path = nanopb
+	url = git@github.com:MRSD-Team-RoboSAR/nanopb.git
