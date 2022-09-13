@@ -208,7 +208,8 @@ bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td, int fifo_
     int i;
 
     // Create protobuf message
-    robosar_fms_AllDetections proto_detections;	
+    robosar_fms_AllDetections proto_detections;
+    proto_detections.tag_detections_count = zarray_size(detections);
     for (i = 0; i < zarray_size(detections); i++) {
         apriltag_detection_t *det;
         zarray_get(detections, i, &det);
@@ -237,7 +238,7 @@ bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td, int fifo_
         {
             //printf("Sending... %ld\n",proto_msg_length);
             //printf("Send completed.\n");
-            write(fifo_client, proto_buffer,proto_msg_length);
+            write(fifo_client, proto_buffer,proto_msg_length+1);
         }
     }
 
@@ -311,12 +312,11 @@ int main(int argc, char *argv[]) {
     td->debug = false;
     td->refine_edges = true;
 
-    // Open IPC Pipe
-    int fifo_client = open("fifo_client",O_WRONLY);
-
-    if(fifo_client<1) {
-        printf("Error opening file");
-    }
+     // Open IPC Pipe
+    char * myfifo = "/tmp/myfifo";
+    mkfifo(myfifo, 0666);
+    // open for write only
+    int fifo_client = open(myfifo, O_WRONLY | O_NONBLOCK);
 
     while(quitReq == 0) {
         
@@ -405,6 +405,8 @@ int main(int argc, char *argv[]) {
     // // Cleanup.
     tag36h11_destroy(tf);
     apriltag_detector_destroy(td);
+
+    close(fifo_client);
 
  	return 0;  
 }
