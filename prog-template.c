@@ -205,27 +205,32 @@ bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td, apriltag_
     zarray_t *detections = apriltag_detector_detect(td, &im);
     if(detections)
     {
+
         int i;
-        double fx = (FOCAL_LENGTH / SENSOR_WIDTH) * IMG_WIDTH;
-        double fy = (FOCAL_LENGTH / SENSOR_WIDTH) * IMG_WIDTH;
         for (i = 0; i < zarray_size(detections); i++) {
-            
             zarray_get(detections, i, &det);
-            apriltag_detection_info_t info;
-            apriltag_pose_t pose;
-            info.det = det;
-            info.tagsize = TAG_SIZE;
-            info.fx = fx;
-            info.fy = fy;
-            info.cx = IMG_HEIGHT/2;
-            info.cy = IMG_WIDTH/2;
-            double err = estimate_tag_pose(&info, &pose);
-            printf("Pose: %lf",pose.t->data[2]);
             printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, margin %8.3f\n",
                             i, det->family->nbits, det->family->h, det->id, det->hamming, det->decision_margin);
             result = true;
+            if(result)
+            {
+                double fx = (FOCAL_LENGTH / SENSOR_WIDTH) * IMG_WIDTH;
+                double fy = (FOCAL_LENGTH / SENSOR_WIDTH) * IMG_WIDTH;
+                zarray_get(detections, i, &det);
+                apriltag_detection_info_t info;
+                apriltag_pose_t pose;
+                info.det = det;
+                info.tagsize = TAG_SIZE;
+                info.fx = fx;
+                info.fy = fy;
+                info.cx = 0;
+                info.cy = 0;
+                double err = estimate_tag_pose(&info, &pose);
+                printf("Pose: Rotation matrix size: %3d X %3d Translation matrix size: %3d X %3d \n Rotation matrix: %lf %lf %lf \n %lf %lf %lf \n %lf %lf %lf \n Translation matrix: %lf %lf %lf \n",pose.R->nrows, pose.R->ncols, pose.t->nrows, pose.t->ncols,pose.R->data[0], pose.R->data[1], pose.R->data[2], pose.R->data[4], pose.R->data[4], pose.R->data[5], pose.R->data[6], pose.R->data[7], pose.R->data[8], pose.t->data[0], pose.t->data[1], pose.t->data[2]);
+            }
         }
     }
+    
     return result;
 }
 
