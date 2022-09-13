@@ -203,24 +203,28 @@ bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td, apriltag_
     image_u8_t im = { .width = IMG_WIDTH, .height = IMG_HEIGHT, .stride = IMG_WIDTH, .buf = buffer };
 
     zarray_t *detections = apriltag_detector_detect(td, &im);
-    int i;
-    double fx = (FOCAL_LENGTH / SENSOR_WIDTH) * IMG_WIDTH;
-    double fy = (FOCAL_LENGTH / SENSOR_WIDTH) * IMG_WIDTH;
-    for (i = 0; i < zarray_size(detections); i++) {
-        
-        zarray_get(detections, i, &det);
-        apriltag_detection_info_t info;
-        apriltag_pose_t pose;
-        info.det = det;
-        info.tagsize = TAG_SIZE;
-        info.fx = fx;
-        info.fy = fy;
-        info.cx = 319.157;
-        info.cy = 235.818;
-        double err = estimate_tag_pose(&info, &pose);
-        printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, margin %8.3f\n",
-                           i, det->family->nbits, det->family->h, det->id, det->hamming, det->decision_margin);
-        result = true;
+    if(detections)
+    {
+        int i;
+        double fx = (FOCAL_LENGTH / SENSOR_WIDTH) * IMG_WIDTH;
+        double fy = (FOCAL_LENGTH / SENSOR_WIDTH) * IMG_WIDTH;
+        for (i = 0; i < zarray_size(detections); i++) {
+            
+            zarray_get(detections, i, &det);
+            apriltag_detection_info_t info;
+            apriltag_pose_t pose;
+            info.det = det;
+            info.tagsize = TAG_SIZE;
+            info.fx = fx;
+            info.fy = fy;
+            info.cx = IMG_HEIGHT/2;
+            info.cy = IMG_WIDTH/2;
+            double err = estimate_tag_pose(&info, &pose);
+            printf("Pose: %lf",pose.t->data[2]);
+            printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, margin %8.3f\n",
+                            i, det->family->nbits, det->family->h, det->id, det->hamming, det->decision_margin);
+            result = true;
+        }
     }
     return result;
 }
@@ -361,11 +365,6 @@ int main(int argc, char *argv[]) {
             // Display battery status
             // printf("pose: %lf",err);
             display_battery_status(dsPic);
-            // if (info) free(info);
-            // if (pose) {
-            //     free(pose->R);
-            //     free(pose->t);
-            // }
 		  }
   	}	
 
