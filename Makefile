@@ -90,11 +90,11 @@ APRILTAG_OBJS := $(APRILTAG_SRCS:%.c=%.o)
 # for debugging
 #CFLAGS 	= -g
 
-TARGET	= template template-static 
+TARGET	= template_perception template-static 
 
 .PHONY: all clean depend
 
-template: prog-template.o
+template_perception: prog-template.o
 	@echo "Building $@"
 	$(CC) $(NANO_INC) -o $@ $? ${NANO_SRCS} $(LIBS) $(CFLAGS) 
 
