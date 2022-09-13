@@ -30,6 +30,7 @@
 #include "apriltag/tagCustom48h12.h"
 #include "apriltag/tagStandard41h12.h"
 #include "apriltag/tagStandard52h13.h"
+#include "apriltag/apriltag_pose.h"
 
 static knet_dev_t * dsPic;
 static int quitReq = 0; // quit variable for loop
@@ -37,7 +38,11 @@ int feedback_frequency = 10;
 // Camera image dimensions
 #define IMG_WIDTH 192// 752 // max width
 #define IMG_HEIGHT 144 // 480  // max height
-
+#define FOV_HORIZONTAL 131
+#define FOCAL_LENGTH 2.1 //mm
+#define TAG_SIZE 0.128 //m
+#define PI 3.1417
+#define SENSOR_WIDTH 2.88 //mm
 /*--------------------------------------------------------------------*/
 /* Make sure the program terminate properly on a ctrl-c */
 static void ctrlc_handler( int sig ) 
@@ -193,27 +198,34 @@ bool rgb_2_gray_scale(unsigned char* original, unsigned char* result) {
     return true;
 }   
 
-bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td) {
-
+bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td, apriltag_detection_t *det) {
     int result = false;
     image_u8_t im = { .width = IMG_WIDTH, .height = IMG_HEIGHT, .stride = IMG_WIDTH, .buf = buffer };
 
     zarray_t *detections = apriltag_detector_detect(td, &im);
     int i;
+    double fx = (FOCAL_LENGTH / SENSOR_WIDTH) * IMG_WIDTH;
+    double fy = (FOCAL_LENGTH / SENSOR_WIDTH) * IMG_WIDTH;
     for (i = 0; i < zarray_size(detections); i++) {
-        apriltag_detection_t *det;
+        
         zarray_get(detections, i, &det);
-
+        apriltag_detection_info_t info;
+        apriltag_pose_t pose;
+        info.det = det;
+        info.tagsize = TAG_SIZE;
+        info.fx = fx;
+        info.fy = fy;
+        info.cx = 319.157;
+        info.cy = 235.818;
+        double err = estimate_tag_pose(&info, &pose);
         printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, margin %8.3f\n",
                            i, det->family->nbits, det->family->h, det->id, det->hamming, det->decision_margin);
-    //     // Do stuff with detections here.
-
         result = true;
     }
-
     return result;
 }
 
+// double detect_depth(unsigned char*buffer )
 
 /*----------------Main Program-----------------*/
 #define FOR_SPD 1000
@@ -273,6 +285,7 @@ int main(int argc, char *argv[]) {
     // image_u8_t* im = image_u8_create_from_pnm("original.jpg");
     apriltag_detector_t *td = apriltag_detector_create();
     apriltag_family_t *tf = tag36h11_create();
+    apriltag_detection_t *det;
     apriltag_detector_add_family(td, tf);
 
     td->quad_decimate = 2.0;
@@ -327,25 +340,32 @@ int main(int argc, char *argv[]) {
 
             // Get camera frame
             getImg(img_buffer);
+            bool result = false;
             if(rgb_2_gray_scale(img_buffer, img_buffer_gray_scale)) {
-                processImageFrame(img_buffer_gray_scale, td);
+                result = processImageFrame(img_buffer_gray_scale, td, det);
             }
-
+            // printf("f ")   
             // saving image
-            // if ((ret=save_buffer_to_jpg("original.jpg",100,img_buffer_gray_scale))<0)
-            // {
-            //     fprintf(stderr,"save image error %d\r\n",ret);
-            //     kb_camera_release();
-            //     return -4;
-            // }
+            int ret;
+            if ((ret=save_buffer_to_jpg("original.jpg",100,img_buffer_gray_scale))<0)
+            {
+                fprintf(stderr,"save image error %d\r\n",ret);
+                kb_camera_release();
+                return -4;
+            }
 
     		//TCPsendSensor(new_socket, T, acc_X, acc_Y, acc_Z, gyro_X, gyro_Y, gyro_Z, posL, posR, spdL, spdR, usValues, irValues);
     		//UDPsendSensor(UDP_sockfd, servaddr, 0, acc_X, acc_Y, acc_Z, gyro_X, gyro_Y, gyro_Z, posL, posR, spdL, spdR, usValues, irValues, LRF_Buffer);
     		//printf("Sleeping...\n");
 
             // Display battery status
+            // printf("pose: %lf",err);
             display_battery_status(dsPic);
-
+            // if (info) free(info);
+            // if (pose) {
+            //     free(pose->R);
+            //     free(pose->t);
+            // }
 		  }
   	}	
 
