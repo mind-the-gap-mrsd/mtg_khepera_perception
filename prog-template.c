@@ -242,7 +242,6 @@ bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td) {
     return result;
 }
 
-// double detect_depth(unsigned char*buffer )
 
 /*----------------Main Program-----------------*/
 #define FOR_SPD 1000
@@ -356,26 +355,24 @@ int main(int argc, char *argv[]) {
 
             // Get camera frame
             getImg(img_buffer);
-            bool result = false;
             if(rgb_2_gray_scale(img_buffer, img_buffer_gray_scale)) {
-                result = processImageFrame(img_buffer_gray_scale, td);
+                processImageFrame(img_buffer_gray_scale, td);
             }
             // printf("f ")   
             // saving image
-            int ret;
-            if ((ret=save_buffer_to_jpg("original.jpg",100,img_buffer_gray_scale))<0)
-            {
-                fprintf(stderr,"save image error %d\r\n",ret);
-                kb_camera_release();
-                return -4;
-            }
+            // int ret;
+            // if ((ret=save_buffer_to_jpg("original.jpg",100,img_buffer_gray_scale))<0)
+            // {
+            //     fprintf(stderr,"save image error %d\r\n",ret);
+            //     kb_camera_release();
+            //     return -4;
+            // }
 
     		//TCPsendSensor(new_socket, T, acc_X, acc_Y, acc_Z, gyro_X, gyro_Y, gyro_Z, posL, posR, spdL, spdR, usValues, irValues);
     		//UDPsendSensor(UDP_sockfd, servaddr, 0, acc_X, acc_Y, acc_Z, gyro_X, gyro_Y, gyro_Z, posL, posR, spdL, spdR, usValues, irValues, LRF_Buffer);
     		//printf("Sleeping...\n");
 
             // Display battery status
-            // printf("pose: %lf",err);
             display_battery_status(dsPic);
 		  }
   	}	
