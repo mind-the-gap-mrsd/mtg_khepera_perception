@@ -358,7 +358,9 @@ int main(int argc, char *argv[]) {
             if(rgb_2_gray_scale(img_buffer, img_buffer_gray_scale)) {
                 processImageFrame(img_buffer_gray_scale, td);
             }
-            // printf("f ")   
+            else {
+                printf("Error in converting RGB to gray scale\n");
+            }
             // saving image
             // int ret;
             // if ((ret=save_buffer_to_jpg("original.jpg",100,img_buffer_gray_scale))<0)
