@@ -296,12 +296,6 @@ int main(int argc, char *argv[]) {
   	// It handles all the inputs and outputs
   	dsPic  = knet_open( "Khepera4:dsPic" , KNET_BUS_I2C , 0 , NULL );
 
-    // Blue LED for booting
-    kh4_SetRGBLeds(
-        0x00, 0x00, 0x08,
-        0x00, 0x00, 0x08,
-        0x00, 0x00, 0x08, dsPic);
-
   	// This is for the ctrl-C handler
   	signal( SIGINT , ctrlc_handler );
     // To handle PKILL
@@ -317,9 +311,6 @@ int main(int argc, char *argv[]) {
     // Get the starting time stamp
     gettimeofday(&cur_time,0x0);
     old_time = cur_time;
-
-    // For blinking LED
-    char led_cnt = 0;
 
     // Start camera
     unsigned char img_buffer[IMG_WIDTH*IMG_HEIGHT*3*sizeof(char)] = {0};
@@ -352,41 +343,8 @@ int main(int argc, char *argv[]) {
 
 
 		if(elapsed_time_us > main_loop_delay){
-            led_cnt++;
-            if(led_cnt > feedback_frequency){
-                led_cnt = 0;
-                // Turn LED off to cause blinking
-                kh4_SetRGBLeds(
-                    0x00, 0x00, 0x00,
-                    0x00, 0x00, 0x00,
-                    0x00, 0x00, 0x00, dsPic);
-            }
             old_time = cur_time;
             
-            //----------------- All sensor readings ------------------//
-    		// Receive accelerometer readings
-    		// getAcc(acc_Buffer, &acc_X, &acc_Y, &acc_Z);
-
-    		// Receive ultrasonic sensor readings
-    		// getUS(us_Buffer, usValues);
-    		
-    		// Receive infrared sensor readings
-    		// getIR(ir_Buffer, irValues);
-    		
-    		// Receive gyroscope readings
-    		// getGyro(gyro_Buffer, &gyro_X, &gyro_Y, &gyro_Z);
-    		
-    		// Receive encoder readings
-    		// getEC(&posL, &posR);
-    		
-    		// Receive encoder speed readings
-    		// getSPD(&spdL, &spdR);
-
-            // Receive LRF readings if available
-            // if(!(LRF_DeviceHandle < 0))
-            //     getLRF(LRF_DeviceHandle, LRF_Buffer);
-            // else
-            //     memset(LRF_Buffer, 0, sizeof(long)*LRF_DATA_NB);
 
             // Get camera frame
             getImg(img_buffer);
@@ -405,20 +363,12 @@ int main(int argc, char *argv[]) {
             //     return -4;
             // }
 
-    		//TCPsendSensor(new_socket, T, acc_X, acc_Y, acc_Z, gyro_X, gyro_Y, gyro_Z, posL, posR, spdL, spdR, usValues, irValues);
-    		//UDPsendSensor(UDP_sockfd, servaddr, 0, acc_X, acc_Y, acc_Z, gyro_X, gyro_Y, gyro_Z, posL, posR, spdL, spdR, usValues, irValues, LRF_Buffer);
     		//printf("Sleeping...\n");
 
             // Display battery status
             display_battery_status(dsPic);
 		  }
   	}	
-
-    // Red when not doing anything
-    kh4_SetRGBLeds(
-        0x08, 0x00, 0x00,
-        0x08, 0x00, 0x00,
-        0x08, 0x00, 0x00, dsPic);
 
   	// switch to normal key input mode
   	// This is important, if we don't switch the term mode back to zero
@@ -434,6 +384,7 @@ int main(int argc, char *argv[]) {
     tag36h11_destroy(tf);
     apriltag_detector_destroy(td);
 
+    // close IPC pipe
     close(fifo_client);
 
  	return 0;  
