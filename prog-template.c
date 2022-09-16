@@ -198,7 +198,9 @@ bool rgb_2_gray_scale(unsigned char* original, unsigned char* result) {
     return true;
 }   
 
-bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td, apriltag_detection_t *det) {
+
+
+bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td) {
     int result = false;
     image_u8_t im = { .width = IMG_WIDTH, .height = IMG_HEIGHT, .stride = IMG_WIDTH, .buf = buffer };
 
@@ -208,26 +210,32 @@ bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td, apriltag_
 
         int i;
         for (i = 0; i < zarray_size(detections); i++) {
+            apriltag_detection_t *det;
             zarray_get(detections, i, &det);
             printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, margin %8.3f\n",
                             i, det->family->nbits, det->family->h, det->id, det->hamming, det->decision_margin);
             result = true;
-            if(result)
-            {
-                double fx = (FOCAL_LENGTH / SENSOR_WIDTH) * IMG_WIDTH;
-                double fy = (FOCAL_LENGTH / SENSOR_WIDTH) * IMG_WIDTH;
-                zarray_get(detections, i, &det);
-                apriltag_detection_info_t info;
-                apriltag_pose_t pose;
-                info.det = det;
-                info.tagsize = TAG_SIZE;
-                info.fx = fx;
-                info.fy = fy;
-                info.cx = 0;
-                info.cy = 0;
-                double err = estimate_tag_pose(&info, &pose);
-                printf("Pose: Rotation matrix size: %3d X %3d Translation matrix size: %3d X %3d \n Rotation matrix: %lf %lf %lf \n %lf %lf %lf \n %lf %lf %lf \n Translation matrix: %lf %lf %lf \n",pose.R->nrows, pose.R->ncols, pose.t->nrows, pose.t->ncols,pose.R->data[0], pose.R->data[1], pose.R->data[2], pose.R->data[4], pose.R->data[4], pose.R->data[5], pose.R->data[6], pose.R->data[7], pose.R->data[8], pose.t->data[0], pose.t->data[1], pose.t->data[2]);
-            }
+
+            double fx = (FOCAL_LENGTH / SENSOR_WIDTH) * IMG_WIDTH;
+            double fy = (FOCAL_LENGTH / SENSOR_WIDTH) * IMG_WIDTH;
+
+            apriltag_detection_info_t info;
+            apriltag_pose_t pose;
+            info.det = det;
+            info.tagsize = TAG_SIZE;
+            info.fx = fx;
+            info.fy = fy;
+            info.cx = 0;
+            info.cy = 0;
+            double err = estimate_tag_pose(&info, &pose);
+            printf("Pose: Rotation matrix size: %3d X %3d Translation matrix size: %3d X %3d \n \
+                                                        Rotation matrix: %lf %lf %lf \n %lf %lf %lf \n %lf %lf %lf \n \
+                                                        Translation matrix: %lf %lf %lf \n",
+                                                        pose.R->nrows, pose.R->ncols, pose.t->nrows, 
+                                                        pose.t->ncols,pose.R->data[0], pose.R->data[1], 
+                                                        pose.R->data[2], pose.R->data[3], pose.R->data[4],
+                                                         pose.R->data[5], pose.R->data[6], pose.R->data[7], 
+                                                         pose.R->data[8], pose.t->data[0], pose.t->data[1], pose.t->data[2]);
         }
     }
     
@@ -294,7 +302,6 @@ int main(int argc, char *argv[]) {
     // image_u8_t* im = image_u8_create_from_pnm("original.jpg");
     apriltag_detector_t *td = apriltag_detector_create();
     apriltag_family_t *tf = tag36h11_create();
-    apriltag_detection_t *det;
     apriltag_detector_add_family(td, tf);
 
     td->quad_decimate = 2.0;
@@ -351,7 +358,7 @@ int main(int argc, char *argv[]) {
             getImg(img_buffer);
             bool result = false;
             if(rgb_2_gray_scale(img_buffer, img_buffer_gray_scale)) {
-                result = processImageFrame(img_buffer_gray_scale, td, det);
+                result = processImageFrame(img_buffer_gray_scale, td);
             }
             // printf("f ")   
             // saving image
