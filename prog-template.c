@@ -36,14 +36,19 @@
 #include "apriltag/tagCustom48h12.h"
 #include "apriltag/tagStandard41h12.h"
 #include "apriltag/tagStandard52h13.h"
+#include "apriltag/apriltag_pose.h"
 
 static knet_dev_t * dsPic;
 static int quitReq = 0; // quit variable for loop
 int feedback_frequency = 10;
 // Camera image dimensions
-#define IMG_WIDTH 192// 752 // max width
-#define IMG_HEIGHT 144 // 480  // max height
-
+#define IMG_WIDTH 192 //752 // max width
+#define IMG_HEIGHT 144 //480  // max height
+#define FOV_HORIZONTAL 131
+#define FOCAL_LENGTH 2.1 //mm
+#define TAG_SIZE 0.128 //m
+#define PI 3.1417
+#define SENSOR_WIDTH 2.88 //mm
 /*--------------------------------------------------------------------*/
 /* Make sure the program terminate properly on a ctrl-c */
 static void ctrlc_handler( int sig ) 
@@ -199,26 +204,63 @@ bool rgb_2_gray_scale(unsigned char* original, unsigned char* result) {
     return true;
 }   
 
-bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td, int fifo_client) {
 
-    int result = false;
+
+bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td, int fifo_client) {
+    bool result = false;
     image_u8_t im = { .width = IMG_WIDTH, .height = IMG_HEIGHT, .stride = IMG_WIDTH, .buf = buffer };
 
     zarray_t *detections = apriltag_detector_detect(td, &im);
+   
     int i;
-
     // Create protobuf message
     robosar_fms_AllDetections proto_detections;
     proto_detections.tag_detections_count = zarray_size(detections);
     for (i = 0; i < zarray_size(detections); i++) {
         apriltag_detection_t *det;
         zarray_get(detections, i, &det);
-
-        printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, margin %8.3f\n",
-                           i, det->family->nbits, det->family->h, det->id, det->hamming, det->decision_margin);
-    //     // Do stuff with detections here.
+        // printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, margin %8.3f\n",
+        //                 i, det->family->nbits, det->family->h, det->id, det->hamming, det->decision_margin);
+        // Do stuff with detections here.
         robosar_fms_AprilTagDetection detection;
         detection.tag_id =  det->id;
+
+        double fx = (FOCAL_LENGTH / SENSOR_WIDTH) * IMG_WIDTH;
+        double fy = (FOCAL_LENGTH / SENSOR_WIDTH) * IMG_WIDTH;
+
+        apriltag_detection_info_t info;
+        apriltag_pose_t pose;
+        info.det = det;
+        info.tagsize = TAG_SIZE;
+        info.fx = fx;
+        info.fy = fy;
+        info.cx = 0;
+        info.cy = 0;
+        // TODO Handle error return from estimate tag pose
+        double err = estimate_tag_pose(&info, &pose);
+        // printf("Pose: Rotation matrix size: %3d X %3d Translation matrix size: %3d X %3d \n \
+        //                                             Rotation matrix: %lf %lf %lf \n %lf %lf %lf \n %lf %lf %lf \n \
+        //                                             Translation matrix: %lf %lf %lf \n",
+        //                                             pose.R->nrows, pose.R->ncols, pose.t->nrows, 
+        //                                             pose.t->ncols,pose.R->data[0], pose.R->data[1], 
+        //                                             pose.R->data[2], pose.R->data[3], pose.R->data[4],
+        //                                                 pose.R->data[5], pose.R->data[6], pose.R->data[7], 
+        //                                                 pose.R->data[8], pose.t->data[0], pose.t->data[1], pose.t->data[2]);
+        
+        detection.pose.R.r11 = pose.R->data[0];
+        detection.pose.R.r12 = pose.R->data[1];
+        detection.pose.R.r13 = pose.R->data[2];
+        detection.pose.R.r21 = pose.R->data[3];
+        detection.pose.R.r22 = pose.R->data[4];
+        detection.pose.R.r23 = pose.R->data[5];
+        detection.pose.R.r31 = pose.R->data[6];
+        detection.pose.R.r32 = pose.R->data[7];
+        detection.pose.R.r33 = pose.R->data[8];
+        detection.pose.t.x = pose.t->data[0];
+        detection.pose.t.y = pose.t->data[1];
+        detection.pose.t.z = pose.t->data[2];
+
+        // Transfer this detection to proto message
         proto_detections.tag_detections[i] = detection;
         result = true;
     }
@@ -241,7 +283,7 @@ bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td, int fifo_
             write(fifo_client, proto_buffer,proto_msg_length+1);
         }
     }
-
+    
     return result;
 }
 
@@ -270,12 +312,6 @@ int main(int argc, char *argv[]) {
   	// It handles all the inputs and outputs
   	dsPic  = knet_open( "Khepera4:dsPic" , KNET_BUS_I2C , 0 , NULL );
 
-    // Blue LED for booting
-    kh4_SetRGBLeds(
-        0x00, 0x00, 0x08,
-        0x00, 0x00, 0x08,
-        0x00, 0x00, 0x08, dsPic);
-
   	// This is for the ctrl-C handler
   	signal( SIGINT , ctrlc_handler );
     // To handle PKILL
@@ -291,9 +327,6 @@ int main(int argc, char *argv[]) {
     // Get the starting time stamp
     gettimeofday(&cur_time,0x0);
     old_time = cur_time;
-
-    // For blinking LED
-    char led_cnt = 0;
 
     // Start camera
     unsigned char img_buffer[IMG_WIDTH*IMG_HEIGHT*3*sizeof(char)] = {0};
@@ -326,49 +359,19 @@ int main(int argc, char *argv[]) {
 
 
 		if(elapsed_time_us > main_loop_delay){
-            led_cnt++;
-            if(led_cnt > feedback_frequency){
-                led_cnt = 0;
-                // Turn LED off to cause blinking
-                kh4_SetRGBLeds(
-                    0x00, 0x00, 0x00,
-                    0x00, 0x00, 0x00,
-                    0x00, 0x00, 0x00, dsPic);
-            }
             old_time = cur_time;
             
-            //----------------- All sensor readings ------------------//
-    		// Receive accelerometer readings
-    		// getAcc(acc_Buffer, &acc_X, &acc_Y, &acc_Z);
-
-    		// Receive ultrasonic sensor readings
-    		// getUS(us_Buffer, usValues);
-    		
-    		// Receive infrared sensor readings
-    		// getIR(ir_Buffer, irValues);
-    		
-    		// Receive gyroscope readings
-    		// getGyro(gyro_Buffer, &gyro_X, &gyro_Y, &gyro_Z);
-    		
-    		// Receive encoder readings
-    		// getEC(&posL, &posR);
-    		
-    		// Receive encoder speed readings
-    		// getSPD(&spdL, &spdR);
-
-            // Receive LRF readings if available
-            // if(!(LRF_DeviceHandle < 0))
-            //     getLRF(LRF_DeviceHandle, LRF_Buffer);
-            // else
-            //     memset(LRF_Buffer, 0, sizeof(long)*LRF_DATA_NB);
 
             // Get camera frame
             getImg(img_buffer);
             if(rgb_2_gray_scale(img_buffer, img_buffer_gray_scale)) {
                 processImageFrame(img_buffer_gray_scale, td, fifo_client);
             }
-
+            else {
+                printf("Error in converting RGB to gray scale\n");
+            }
             // saving image
+            // int ret;
             // if ((ret=save_buffer_to_jpg("original.jpg",100,img_buffer_gray_scale))<0)
             // {
             //     fprintf(stderr,"save image error %d\r\n",ret);
@@ -376,21 +379,12 @@ int main(int argc, char *argv[]) {
             //     return -4;
             // }
 
-    		//TCPsendSensor(new_socket, T, acc_X, acc_Y, acc_Z, gyro_X, gyro_Y, gyro_Z, posL, posR, spdL, spdR, usValues, irValues);
-    		//UDPsendSensor(UDP_sockfd, servaddr, 0, acc_X, acc_Y, acc_Z, gyro_X, gyro_Y, gyro_Z, posL, posR, spdL, spdR, usValues, irValues, LRF_Buffer);
     		//printf("Sleeping...\n");
 
             // Display battery status
             display_battery_status(dsPic);
-
 		  }
   	}	
-
-    // Red when not doing anything
-    kh4_SetRGBLeds(
-        0x08, 0x00, 0x00,
-        0x08, 0x00, 0x00,
-        0x08, 0x00, 0x00, dsPic);
 
   	// switch to normal key input mode
   	// This is important, if we don't switch the term mode back to zero
@@ -406,6 +400,7 @@ int main(int argc, char *argv[]) {
     tag36h11_destroy(tf);
     apriltag_detector_destroy(td);
 
+    // close IPC pipe
     close(fifo_client);
 
  	return 0;  
