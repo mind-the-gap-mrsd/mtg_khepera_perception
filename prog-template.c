@@ -42,8 +42,8 @@ static knet_dev_t * dsPic;
 static int quitReq = 0; // quit variable for loop
 int feedback_frequency = 10;
 // Camera image dimensions
-#define IMG_WIDTH 192// 752 // max width
-#define IMG_HEIGHT 144 // 480  // max height
+#define IMG_WIDTH 192 //752 // max width
+#define IMG_HEIGHT 144 //480  // max height
 #define FOV_HORIZONTAL 131
 #define FOCAL_LENGTH 2.1 //mm
 #define TAG_SIZE 0.128 //m
@@ -207,7 +207,7 @@ bool rgb_2_gray_scale(unsigned char* original, unsigned char* result) {
 
 
 bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td, int fifo_client) {
-    int result = false;
+    bool result = false;
     image_u8_t im = { .width = IMG_WIDTH, .height = IMG_HEIGHT, .stride = IMG_WIDTH, .buf = buffer };
 
     zarray_t *detections = apriltag_detector_detect(td, &im);
@@ -224,8 +224,6 @@ bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td, int fifo_
         // Do stuff with detections here.
         robosar_fms_AprilTagDetection detection;
         detection.tag_id =  det->id;
-        proto_detections.tag_detections[i] = detection;
-        result = true;
 
         double fx = (FOCAL_LENGTH / SENSOR_WIDTH) * IMG_WIDTH;
         double fy = (FOCAL_LENGTH / SENSOR_WIDTH) * IMG_WIDTH;
@@ -238,6 +236,7 @@ bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td, int fifo_
         info.fy = fy;
         info.cx = 0;
         info.cy = 0;
+        // TODO Handle error return from estimate tag pose
         double err = estimate_tag_pose(&info, &pose);
         printf("Pose: Rotation matrix size: %3d X %3d Translation matrix size: %3d X %3d \n \
                                                     Rotation matrix: %lf %lf %lf \n %lf %lf %lf \n %lf %lf %lf \n \
@@ -247,6 +246,23 @@ bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td, int fifo_
                                                     pose.R->data[2], pose.R->data[3], pose.R->data[4],
                                                         pose.R->data[5], pose.R->data[6], pose.R->data[7], 
                                                         pose.R->data[8], pose.t->data[0], pose.t->data[1], pose.t->data[2]);
+        
+        detection.pose.R.r11 = pose.R->data[0];
+        detection.pose.R.r12 = pose.R->data[1];
+        detection.pose.R.r13 = pose.R->data[2];
+        detection.pose.R.r21 = pose.R->data[3];
+        detection.pose.R.r22 = pose.R->data[4];
+        detection.pose.R.r23 = pose.R->data[5];
+        detection.pose.R.r31 = pose.R->data[6];
+        detection.pose.R.r32 = pose.R->data[7];
+        detection.pose.R.r33 = pose.R->data[8];
+        detection.pose.t.x = pose.t->data[0];
+        detection.pose.t.y = pose.t->data[1];
+        detection.pose.t.z = pose.t->data[2];
+
+        // Transfer this detection to proto message
+        proto_detections.tag_detections[i] = detection;
+        result = true;
     }
 
     if(result) {
