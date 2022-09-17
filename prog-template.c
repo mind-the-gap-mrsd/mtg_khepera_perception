@@ -219,8 +219,8 @@ bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td, int fifo_
     for (i = 0; i < zarray_size(detections); i++) {
         apriltag_detection_t *det;
         zarray_get(detections, i, &det);
-        printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, margin %8.3f\n",
-                        i, det->family->nbits, det->family->h, det->id, det->hamming, det->decision_margin);
+        // printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, margin %8.3f\n",
+        //                 i, det->family->nbits, det->family->h, det->id, det->hamming, det->decision_margin);
         // Do stuff with detections here.
         robosar_fms_AprilTagDetection detection;
         detection.tag_id =  det->id;
@@ -238,14 +238,14 @@ bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td, int fifo_
         info.cy = 0;
         // TODO Handle error return from estimate tag pose
         double err = estimate_tag_pose(&info, &pose);
-        printf("Pose: Rotation matrix size: %3d X %3d Translation matrix size: %3d X %3d \n \
-                                                    Rotation matrix: %lf %lf %lf \n %lf %lf %lf \n %lf %lf %lf \n \
-                                                    Translation matrix: %lf %lf %lf \n",
-                                                    pose.R->nrows, pose.R->ncols, pose.t->nrows, 
-                                                    pose.t->ncols,pose.R->data[0], pose.R->data[1], 
-                                                    pose.R->data[2], pose.R->data[3], pose.R->data[4],
-                                                        pose.R->data[5], pose.R->data[6], pose.R->data[7], 
-                                                        pose.R->data[8], pose.t->data[0], pose.t->data[1], pose.t->data[2]);
+        // printf("Pose: Rotation matrix size: %3d X %3d Translation matrix size: %3d X %3d \n \
+        //                                             Rotation matrix: %lf %lf %lf \n %lf %lf %lf \n %lf %lf %lf \n \
+        //                                             Translation matrix: %lf %lf %lf \n",
+        //                                             pose.R->nrows, pose.R->ncols, pose.t->nrows, 
+        //                                             pose.t->ncols,pose.R->data[0], pose.R->data[1], 
+        //                                             pose.R->data[2], pose.R->data[3], pose.R->data[4],
+        //                                                 pose.R->data[5], pose.R->data[6], pose.R->data[7], 
+        //                                                 pose.R->data[8], pose.t->data[0], pose.t->data[1], pose.t->data[2]);
         
         detection.pose.R.r11 = pose.R->data[0];
         detection.pose.R.r12 = pose.R->data[1];
