@@ -49,7 +49,6 @@ int feedback_frequency = 10;
 #define TAG_SIZE 0.128 //m
 #define PI 3.1417
 #define SENSOR_WIDTH 2.88 //mm
-#define MAX_WHEEL_SPEED_MM_S 810
 /*--------------------------------------------------------------------*/
 /* Make sure the program terminate properly on a ctrl-c */
 static void ctrlc_handler( int sig ) 
@@ -208,7 +207,6 @@ bool rgb_2_gray_scale(unsigned char* original, unsigned char* result) {
 
 
 bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td, int fifo_client) {
-    printf("Inside process image frame \n");
     bool result = false;
     image_u8_t im = { .width = IMG_WIDTH, .height = IMG_HEIGHT, .stride = IMG_WIDTH, .buf = buffer };
 
@@ -221,46 +219,46 @@ bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td, int fifo_
     for (i = 0; i < zarray_size(detections); i++) {
         apriltag_detection_t *det;
         zarray_get(detections, i, &det);
-        printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, margin %8.3f\n",
-                        i, det->family->nbits, det->family->h, det->id, det->hamming, det->decision_margin);
+        // printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, margin %8.3f\n",
+        //                 i, det->family->nbits, det->family->h, det->id, det->hamming, det->decision_margin);
         // Do stuff with detections here.
         robosar_fms_AprilTagDetection detection;
         detection.tag_id =  det->id;
 
-        // double fx = (FOCAL_LENGTH / SENSOR_WIDTH) * IMG_WIDTH;
-        // double fy = (FOCAL_LENGTH / SENSOR_WIDTH) * IMG_WIDTH;
+        double fx = (FOCAL_LENGTH / SENSOR_WIDTH) * IMG_WIDTH;
+        double fy = (FOCAL_LENGTH / SENSOR_WIDTH) * IMG_WIDTH;
 
-        // apriltag_detection_info_t info;
-        // apriltag_pose_t pose;
-        // info.det = det;
-        // info.tagsize = TAG_SIZE;
-        // info.fx = fx;
-        // info.fy = fy;
-        // info.cx = 0;
-        // info.cy = 0;
-        // // TODO Handle error return from estimate tag pose
-        // double err = estimate_tag_pose(&info, &pose);
-        // // printf("Pose: Rotation matrix size: %3d X %3d Translation matrix size: %3d X %3d \n \
-        // //                                             Rotation matrix: %lf %lf %lf \n %lf %lf %lf \n %lf %lf %lf \n \
-        // //                                             Translation matrix: %lf %lf %lf \n",
-        // //                                             pose.R->nrows, pose.R->ncols, pose.t->nrows, 
-        // //                                             pose.t->ncols,pose.R->data[0], pose.R->data[1], 
-        // //                                             pose.R->data[2], pose.R->data[3], pose.R->data[4],
-        // //                                                 pose.R->data[5], pose.R->data[6], pose.R->data[7], 
-        // //                                                 pose.R->data[8], pose.t->data[0], pose.t->data[1], pose.t->data[2]);
+        apriltag_detection_info_t info;
+        apriltag_pose_t pose;
+        info.det = det;
+        info.tagsize = TAG_SIZE;
+        info.fx = fx;
+        info.fy = fy;
+        info.cx = 0;
+        info.cy = 0;
+        // TODO Handle error return from estimate tag pose
+        double err = estimate_tag_pose(&info, &pose);
+        // printf("Pose: Rotation matrix size: %3d X %3d Translation matrix size: %3d X %3d \n \
+        //                                             Rotation matrix: %lf %lf %lf \n %lf %lf %lf \n %lf %lf %lf \n \
+        //                                             Translation matrix: %lf %lf %lf \n",
+        //                                             pose.R->nrows, pose.R->ncols, pose.t->nrows, 
+        //                                             pose.t->ncols,pose.R->data[0], pose.R->data[1], 
+        //                                             pose.R->data[2], pose.R->data[3], pose.R->data[4],
+        //                                                 pose.R->data[5], pose.R->data[6], pose.R->data[7], 
+        //                                                 pose.R->data[8], pose.t->data[0], pose.t->data[1], pose.t->data[2]);
         
-        // detection.pose.R.r11 = pose.R->data[0];
-        // detection.pose.R.r12 = pose.R->data[1];
-        // detection.pose.R.r13 = pose.R->data[2];
-        // detection.pose.R.r21 = pose.R->data[3];
-        // detection.pose.R.r22 = pose.R->data[4];
-        // detection.pose.R.r23 = pose.R->data[5];
-        // detection.pose.R.r31 = pose.R->data[6];
-        // detection.pose.R.r32 = pose.R->data[7];
-        // detection.pose.R.r33 = pose.R->data[8];
-        // detection.pose.t.x = pose.t->data[0];
-        // detection.pose.t.y = pose.t->data[1];
-        // detection.pose.t.z = pose.t->data[2];
+        detection.pose.R.r11 = pose.R->data[0];
+        detection.pose.R.r12 = pose.R->data[1];
+        detection.pose.R.r13 = pose.R->data[2];
+        detection.pose.R.r21 = pose.R->data[3];
+        detection.pose.R.r22 = pose.R->data[4];
+        detection.pose.R.r23 = pose.R->data[5];
+        detection.pose.R.r31 = pose.R->data[6];
+        detection.pose.R.r32 = pose.R->data[7];
+        detection.pose.R.r33 = pose.R->data[8];
+        detection.pose.t.x = pose.t->data[0];
+        detection.pose.t.y = pose.t->data[1];
+        detection.pose.t.z = pose.t->data[2];
 
         // Transfer this detection to proto message
         proto_detections.tag_detections[i] = detection;
@@ -288,6 +286,7 @@ bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td, int fifo_
     
     return result;
 }
+
 
 /*----------------Main Program-----------------*/
 #define FOR_SPD 1000
@@ -356,10 +355,9 @@ int main(int argc, char *argv[]) {
         
 		// Update time
 		gettimeofday(&cur_time,0x0);
-        // Ang_Vel_Control(0.0,0.5);
 		elapsed_time_us = timeval_diff(NULL, &cur_time, &old_time);
 
-        bool detected = false;
+
 		if(elapsed_time_us > main_loop_delay){
             old_time = cur_time;
             
@@ -367,22 +365,19 @@ int main(int argc, char *argv[]) {
             // Get camera frame
             getImg(img_buffer);
             if(rgb_2_gray_scale(img_buffer, img_buffer_gray_scale)) {
-                if(processImageFrame(img_buffer_gray_scale, td, fifo_client)) {
-                    detected = true;
-                }
+                processImageFrame(img_buffer_gray_scale, td, fifo_client);
             }
             else {
                 printf("Error in converting RGB to gray scale\n");
             }
-            int ret;
-            
+            // saving image
+            // int ret;
             // if ((ret=save_buffer_to_jpg("original.jpg",100,img_buffer_gray_scale))<0)
             // {
             //     fprintf(stderr,"save image error %d\r\n",ret);
             //     kb_camera_release();
             //     return -4;
             // }
-            return 0;
 
     		//printf("Sleeping...\n");
 
