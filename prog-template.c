@@ -42,8 +42,8 @@ static knet_dev_t * dsPic;
 static int quitReq = 0; // quit variable for loop
 int feedback_frequency = 10;
 // Camera image dimensions
-#define IMG_WIDTH 752 //752 // max width
-#define IMG_HEIGHT 480 //480  // max height
+#define IMG_WIDTH 192 //752 // max width
+#define IMG_HEIGHT 144 //480  // max height
 #define FOV_HORIZONTAL 131
 #define FOCAL_LENGTH 2.1 //mm
 #define TAG_SIZE 0.128 //m
@@ -321,8 +321,8 @@ int main(int argc, char *argv[]) {
   	kb_change_term_mode(1);
 
     // Variables for time stamps
-    struct timeval cur_time, old_time, old_frame_time, curr_frame_time;
-    long long elapsed_time_us, elapsed_frame_time_us;
+    struct timeval cur_time, old_time;
+    long long elapsed_time_us;
 
     // Get the starting time stamp
     gettimeofday(&cur_time,0x0);
@@ -363,7 +363,6 @@ int main(int argc, char *argv[]) {
             
 
             // Get camera frame
-            gettimeofday(&old_frame_time, 0x0);
             getImg(img_buffer);
             if(rgb_2_gray_scale(img_buffer, img_buffer_gray_scale)) {
                 processImageFrame(img_buffer_gray_scale, td, fifo_client);
@@ -371,9 +370,6 @@ int main(int argc, char *argv[]) {
             else {
                 printf("Error in converting RGB to gray scale\n");
             }
-            gettimeofday(&curr_frame_time, 0x0);
-            elapsed_frame_time_us = timeval_diff(NULL, &curr_frame_time, &old_frame_time);
-            
             // saving image
             // int ret;
             // if ((ret=save_buffer_to_jpg("original.jpg",100,img_buffer_gray_scale))<0)
