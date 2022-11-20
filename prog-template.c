@@ -42,8 +42,8 @@ static knet_dev_t * dsPic;
 static int quitReq = 0; // quit variable for loop
 int feedback_frequency = 10;
 // Camera image dimensions
-#define IMG_WIDTH 192 //752 // max width
-#define IMG_HEIGHT 144 //480  // max height
+#define IMG_WIDTH 752 // max width
+#define IMG_HEIGHT 480  // max height
 #define FOV_HORIZONTAL 131
 #define FOCAL_LENGTH 2.1 //mm
 #define TAG_SIZE 0.128 //m
