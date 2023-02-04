@@ -3,4 +3,4 @@
 	url = https://github.com/MRSD-Team-RoboSAR/apriltag
 [submodule "nanopb"]
 	path = nanopb
-	url = git@github.com:MRSD-Team-RoboSAR/nanopb.git
+	url = git@github.com:mind-the-gap-mrsd/nanopb.git

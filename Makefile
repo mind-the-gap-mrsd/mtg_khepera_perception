@@ -72,10 +72,10 @@ SRCS	= $(wildcard *.c)
 NANO_SRCS = nanopb/pb_encode.c  # The nanopb encoder
 NANO_SRCS += nanopb/pb_decode.c  # The nanopb decoder
 NANO_SRCS += nanopb/pb_common.c  # The nanopb common parts
-NANO_SRCS += ../robosar_messages/proto/include/c/robosar.pb.c # robosar library file
+NANO_SRCS += ../mtg_messages/proto/include/c/mtg.pb.c # mtg library file
 
 NANO_INC = -I nanopb
-NANO_INC += -I ../robosar_messages/proto/include/c
+NANO_INC += -I ../mtg_messages/proto/include/c
 
 OBJS	= $(patsubst %.c,%.o,${SRCS})
 INCS	= -I ${LIBKHEPERA}/include -I. -I apriltag

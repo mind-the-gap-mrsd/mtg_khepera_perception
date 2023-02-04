@@ -15,7 +15,7 @@
 #include<fcntl.h>
 
 // Nanopb related headers
-#include "robosar.pb.h"
+#include "mtg.pb.h"
 #include <pb_encode.h>
 
 // AprilTag related headers
@@ -214,7 +214,7 @@ bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td, int fifo_
    
     int i;
     // Create protobuf message
-    robosar_fms_AllDetections proto_detections;
+    mtg_fms_AllDetections proto_detections;
     proto_detections.tag_detections_count = zarray_size(detections);
     for (i = 0; i < zarray_size(detections); i++) {
         apriltag_detection_t *det;
@@ -222,7 +222,7 @@ bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td, int fifo_
         // printf("detection %3d: id (%2dx%2d)-%-4d, hamming %d, margin %8.3f\n",
         //                 i, det->family->nbits, det->family->h, det->id, det->hamming, det->decision_margin);
         // Do stuff with detections here.
-        robosar_fms_AprilTagDetection detection;
+        mtg_fms_AprilTagDetection detection;
         detection.tag_id =  det->id;
 
         double fx = (FOCAL_LENGTH / SENSOR_WIDTH) * IMG_WIDTH;
@@ -269,7 +269,7 @@ bool processImageFrame(unsigned char* buffer, apriltag_detector_t *td, int fifo_
         // Send detections to pipe
         uint8_t proto_buffer[25000];
         pb_ostream_t stream = pb_ostream_from_buffer(proto_buffer, sizeof(proto_buffer));
-        bool status = pb_encode(&stream, robosar_fms_AllDetections_fields, &proto_detections);
+        bool status = pb_encode(&stream, mtg_fms_AllDetections_fields, &proto_detections);
         size_t proto_msg_length = stream.bytes_written;
 
         if (!status)

@@ -1,5 +1,5 @@
-# robosar_khepera_perception
-Perception Module for RoboSAR
+# mtg_khepera_perception
+Perception Module for mtg
 
 ### Using the build system
 * Step 1 : make libapriltag.a
